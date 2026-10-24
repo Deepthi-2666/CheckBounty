@@ -1,355 +1,569 @@
-
-import { useRef, useState } from 'react'
-import './App.css'
+import "./App.css";
+import { useState } from "react";
 
 const initialChores = [
-  { id: 1, title: 'Make your bed', child: 'Alex', points: 10, status: 'Pending review', icon: '🛏️', proof: '' },
-  { id: 2, title: 'Water the plants', child: 'Alex', points: 15, status: 'Available', icon: '🪴', proof: '' },
-  { id: 3, title: 'Organize study table', child: 'Emma', points: 20, status: 'Available', icon: '📚', proof: '' },
-  { id: 4, title: 'Help set the table', child: 'Emma', points: 15, status: 'Approved', icon: '🍽️', proof: '' },
-]
+  { id: 1, title: "Clean your study table", points: 20, status: "Available", photo: "" },
+  { id: 2, title: "Water the plants", points: 10, status: "Available", photo: "" },
+  { id: 3, title: "Organize your room", points: 30, status: "Available", photo: "" },
+  { id: 4, title: "Help with dinner", points: 25, status: "Available", photo: "" },
+];
 
-const moneyPerPoint = 0.5
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f4f5fb",
+    fontFamily: "Arial, sans-serif",
+    color: "#25233a",
+  },
+  header: {
+    background: "#6c4de6",
+    color: "white",
+    padding: "18px 24px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  main: {
+    maxWidth: 1000,
+    margin: "0 auto",
+    padding: 24,
+  },
+  card: {
+    background: "white",
+    padding: 20,
+    borderRadius: 14,
+    boxShadow: "0 3px 12px #25233a12",
+    marginBottom: 18,
+  },
+  input: {
+    display: "block",
+    width: "100%",
+    boxSizing: "border-box",
+    padding: 12,
+    border: "1px solid #d9d7e5",
+    borderRadius: 8,
+    marginTop: 7,
+    marginBottom: 14,
+    fontSize: 15,
+  },
+  button: {
+    background: "#6c4de6",
+    color: "white",
+    padding: "11px 16px",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  secondaryButton: {
+    background: "#eee9ff",
+    color: "#5436c4",
+    padding: "10px 14px",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  muted: { color: "#716e84", fontSize: 14 },
+};
 
 function App() {
-  const [chores, setChores] = useState(initialChores)
-  const [page, setPage] = useState('Dashboard')
-  const [showForm, setShowForm] = useState(false)
-  const [title, setTitle] = useState('')
-  const [child, setChild] = useState('Alex')
-  const [points, setPoints] = useState('10')
-  const [icon, setIcon] = useState('⭐')
-  const [message, setMessage] = useState('')
-  const fileRefs = useRef({})
+  const [role, setRole] = useState("Parent");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [loginName, setLoginName] = useState("");
+  const [password, setPassword] = useState("");
 
-  const approvedChores = chores.filter(c => c.status === 'Approved')
-  const pendingChores = chores.filter(c => c.status === 'Pending review')
-  const availableChores = chores.filter(c => c.status === 'Available')
-  const totalPoints = approvedChores.reduce((sum, c) => sum + c.points, 0)
-  const earnedMoney = totalPoints * moneyPerPoint
+  const [chores, setChores] = useState(initialChores);
+  const [points, setPoints] = useState(0);
+  const [newTitle, setNewTitle] = useState("");
+  const [newPoints, setNewPoints] = useState("10");
+  const [message, setMessage] = useState("");
 
-  const updateChore = (id, updates) => {
-    setChores(current =>
-      current.map(chore => chore.id === id ? { ...chore, ...updates } : chore)
-    )
+  const moneyPerPoint = 1;
+
+  function handleLogin(event) {
+    event.preventDefault();
+
+    if (!loginName.trim() || !password.trim()) {
+      setMessage("Please enter your name and password.");
+      return;
+    }
+
+    setUserName(loginName.trim());
+    setLoggedIn(true);
+    setMessage("");
   }
 
-  const addChore = (event) => {
-    event.preventDefault()
-    if (!title.trim() || Number(points) < 1) return
+  function addChore(event) {
+    event.preventDefault();
 
-    setChores(current => [
+    const title = newTitle.trim();
+    const value = Number(newPoints);
+
+    if (!title || !Number.isFinite(value) || value <= 0) {
+      setMessage("Enter a chore name and a positive points value.");
+      return;
+    }
+
+    setChores((current) => [
       ...current,
       {
         id: Date.now(),
-        title: title.trim(),
-        child,
-        points: Number(points),
-        icon,
-        status: 'Available',
-        proof: '',
+        title,
+        points: Math.floor(value),
+        status: "Available",
+        photo: "",
       },
-    ])
+    ]);
 
-    setTitle('')
-    setPoints('10')
-    setIcon('⭐')
-    setShowForm(false)
-    setPage('Chores')
-    setMessage('New chore added successfully!')
-    window.setTimeout(() => setMessage(''), 3000)
+    setNewTitle("");
+    setNewPoints("10");
+    setMessage("Chore added successfully!");
   }
 
-  const uploadProof = (id, file) => {
-    if (!file) return
+  function submitPhoto(choreId, file) {
+    if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setMessage('Please choose an image file.')
-      window.setTimeout(() => setMessage(''), 3000)
-      return
+    if (!file.type.startsWith("image/")) {
+      setMessage("Please choose an image file.");
+      return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setMessage('Please choose an image smaller than 5 MB.')
-      window.setTimeout(() => setMessage(''), 3000)
-      return
+      setMessage("Please choose an image smaller than 5 MB.");
+      return;
     }
 
-    const preview = URL.createObjectURL(file)
-    updateChore(id, { proof: preview })
-    setMessage('Photo added. You can now review the chore.')
-    window.setTimeout(() => setMessage(''), 3000)
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setChores((current) =>
+        current.map((chore) =>
+          chore.id === choreId
+            ? { ...chore, photo: reader.result, status: "Pending Review" }
+            : chore
+        )
+      );
+
+      setMessage("Photo submitted! Ask your parent to review it.");
+    };
+
+    reader.onerror = () => {
+      setMessage("Could not read the photo. Please try again.");
+    };
+
+    reader.readAsDataURL(file);
   }
 
-  const approveChore = (chore) => {
-    if (!chore.proof) {
-      setMessage('Upload a photo proof before approving this chore.')
-      window.setTimeout(() => setMessage(''), 3000)
-      return
+  function reviewChore(choreId, approved) {
+    const chore = chores.find((item) => item.id === choreId);
+
+    if (!chore || chore.status !== "Pending Review") return;
+
+    if (approved) {
+      setPoints((current) => current + chore.points);
+
+      setChores((current) =>
+        current.map((item) =>
+          item.id === choreId
+            ? { ...item, status: "Approved" }
+            : item
+        )
+      );
+
+      setMessage(
+        `Chore approved! ${chore.points} points earned.`
+      );
+    } else {
+      setChores((current) =>
+        current.map((item) =>
+          item.id === choreId
+            ? { ...item, status: "Rejected", photo: "" }
+            : item
+        )
+      );
+
+      setMessage("Submission rejected. The child can try again.");
     }
-
-    updateChore(chore.id, { status: 'Approved' })
-    setMessage(`${chore.child} earned ${chore.points} points!`)
-    window.setTimeout(() => setMessage(''), 3000)
   }
 
-  const rejectChore = (id) => {
-    updateChore(id, { status: 'Available', proof: '' })
-    setMessage('Chore returned for completion.')
-    window.setTimeout(() => setMessage(''), 3000)
+  function tryAgain(choreId) {
+    setChores((current) =>
+      current.map((item) =>
+        item.id === choreId &&
+        (item.status === "Rejected" || item.status === "Available")
+          ? { ...item, status: "Available", photo: "" }
+          : item
+      )
+    );
+
+    setMessage("Chore is available for another submission.");
   }
 
-  const navItems = [
-    { name: 'Dashboard', icon: '🏠' },
-    { name: 'Chores', icon: '📋' },
-    { name: 'Rewards', icon: '🎁' },
-  ]
+  function logout() {
+    setLoggedIn(false);
+    setLoginName("");
+    setPassword("");
+    setUserName("");
+    setMessage("");
+  }
 
-  const visibleChores =
-    page === 'Chores'
-      ? chores
-      : page === 'Rewards'
-        ? approvedChores
-        : pendingChores
+  const pendingCount = chores.filter(
+    (chore) => chore.status === "Pending Review"
+  ).length;
 
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="#" onClick={e => { e.preventDefault(); setPage('Dashboard') }}>
-          <span className="brand-mark">✓</span>
-          <span>Check<span className="brand-light">Bounty</span></span>
-        </a>
+  const approvedCount = chores.filter(
+    (chore) => chore.status === "Approved"
+  ).length;
 
-        <div className="family-switcher">
-          <span className="family-avatar">🏡</span>
-          <span><strong>Johnson Family</strong><small>Family workspace</small></span>
-          <span className="switch-arrow">⌄</span>
-        </div>
-
-        <p className="nav-label">WORKSPACE</p>
-        <nav className="nav-list">
-          {navItems.map(item => (
-            <button
-              key={item.name}
-              className={`nav-item ${page === item.name ? 'active' : ''}`}
-              onClick={() => setPage(item.name)}
-            >
-              <span>{item.icon}</span>
-              {item.name}
-              {item.name === 'Chores' && pendingChores.length > 0 && (
-                <span className="nav-count">{pendingChores.length}</span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-tip">
-          <span className="tip-star">✨</span>
-          <h3>Little tasks, big wins!</h3>
-          <p>Every chore helps your family grow together.</p>
-        </div>
-
-        <div className="sidebar-bottom">
-          <span className="parent-avatar">👩🏻</span>
-          <span><strong>Parent account</strong><small>Family manager</small></span>
-          <span className="more-icon">•••</span>
-        </div>
-      </aside>
-
-      <main className="main-content">
-        <header className="topbar">
-          <div className="mobile-brand">
-            <span className="brand-mark">✓</span> CheckBounty
-          </div>
-          <div className="breadcrumb">Family workspace <span>/</span> {page}</div>
-          <div className="topbar-right">
-            <span className="today-pill">💜 Making progress together</span>
-            <span className="parent-avatar top-avatar">👩🏻</span>
+  if (!loggedIn) {
+    return (
+      <div style={styles.page}>
+        <header style={styles.header}>
+          <div>
+            <h1 style={{ margin: 0 }}>CheckBounty</h1>
+            <p style={{ margin: "6px 0 0" }}>
+              Complete chores. Earn rewards.
+            </p>
           </div>
         </header>
 
-        <div className="page-content">
-          <section className="welcome-banner">
-            <div className="welcome-copy">
-              <span className="welcome-tag">YOUR FAMILY, YOUR TEAM ✨</span>
-              <h1>{page === 'Dashboard' ? 'Hey, Parent! 👋' : page === 'Chores' ? 'Chore central 📋' : 'Little wins, lovely rewards 🎁'}</h1>
-              <p>
-                {page === 'Dashboard'
-                  ? 'Make everyday chores a little more fun for everyone.'
-                  : page === 'Chores'
-                    ? 'Create tasks, track progress, and celebrate every effort.'
-                    : 'See the points your little helpers have earned.'}
-              </p>
-              <button className="primary-btn banner-btn" onClick={() => setShowForm(true)}>
-                <span>＋</span> Create a chore
+        <main style={{ ...styles.main, maxWidth: 460 }}>
+          <section style={{ ...styles.card, marginTop: 45 }}>
+            <h2 style={{ marginTop: 0 }}>Welcome!</h2>
+            <p style={styles.muted}>
+              Log in to your CheckBounty demo account.
+            </p>
+
+            <div style={{ display: "flex", gap: 10, margin: "20px 0" }}>
+              <button
+                type="button"
+                onClick={() => setRole("Parent")}
+                style={{
+                  ...styles.button,
+                  flex: 1,
+                  background: role === "Parent" ? "#6c4de6" : "#e8e5f3",
+                  color: role === "Parent" ? "white" : "#39344c",
+                }}
+              >
+                Parent
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRole("Child")}
+                style={{
+                  ...styles.button,
+                  flex: 1,
+                  background: role === "Child" ? "#6c4de6" : "#e8e5f3",
+                  color: role === "Child" ? "white" : "#39344c",
+                }}
+              >
+                Child
               </button>
             </div>
-            <div className="banner-art" aria-hidden="true">
-              <span className="art-sparkle sparkle-one">✦</span>
-              <span className="art-sparkle sparkle-two">✧</span>
-              <div className="art-coin">⭐</div>
-              <div className="art-trophy">🏆</div>
-              <div className="art-points">+20 pts!</div>
-              <span className="art-heart">💜</span>
-            </div>
+
+            <form onSubmit={handleLogin}>
+              <label>
+                {role} name
+                <input
+                  style={styles.input}
+                  value={loginName}
+                  onChange={(event) => setLoginName(event.target.value)}
+                  placeholder={role === "Parent" ? "Enter parent name" : "Enter child name"}
+                  required
+                />
+              </label>
+
+              <label>
+                Password
+                <input
+                  style={styles.input}
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter any demo password"
+                  required
+                />
+              </label>
+
+              <button type="submit" style={{ ...styles.button, width: "100%" }}>
+                Log in as {role}
+              </button>
+            </form>
+
+            <p style={styles.muted}>
+              Demo only: any non-empty name and password will work.
+              This does not create or verify a real account.
+            </p>
+
+            {message && <p role="status">{message}</p>}
           </section>
-
-          {message && <div className="toast" role="status">✨ {message}</div>}
-
-          <section className="stats-grid">
-            <article className="stat-card points-card">
-              <div className="stat-top"><span className="stat-icon purple-icon">⭐</span><span className="stat-caption">ALL-TIME EARNINGS</span></div>
-              <p>Total family points</p>
-              <h2>{totalPoints} <small>pts</small></h2>
-              <div className="stat-foot"><span>🌟</span> Keep the good work going!</div>
-            </article>
-            <article className="stat-card review-card">
-              <div className="stat-top"><span className="stat-icon peach-icon">📝</span><span className="stat-caption">NEEDS YOUR EYES</span></div>
-              <p>Waiting for review</p>
-              <h2>{pendingChores.length} <small>{pendingChores.length === 1 ? 'chore' : 'chores'}</small></h2>
-              <div className="stat-foot"><span>💌</span> Your little helpers are waiting</div>
-            </article>
-            <article className="stat-card money-card">
-              <div className="stat-top"><span className="stat-icon green-icon">🐷</span><span className="stat-caption">ESTIMATED REWARDS</span></div>
-              <p>Money earned</p>
-              <h2>₹{earnedMoney.toFixed(2)}</h2>
-              <div className="stat-foot"><span>💜</span> ₹{moneyPerPoint.toFixed(2)} per point</div>
-            </article>
-          </section>
-
-          {page === 'Dashboard' && (
-            <>
-              <section className="section-block">
-                <div className="section-heading">
-                  <div><span className="section-kicker">A LITTLE HELP GOES A LONG WAY</span><h2>Needs your approval <span className="heading-emoji">💌</span></h2><p>Check the photo proof before awarding points.</p></div>
-                  <button className="text-btn" onClick={() => setPage('Chores')}>View all chores →</button>
-                </div>
-
-                {pendingChores.length === 0 ? (
-                  <div className="empty-state"><span>🎉</span><h3>All caught up!</h3><p>New chores submitted by your children will appear here.</p></div>
-                ) : (
-                  <div className="review-grid">
-                    {pendingChores.map(chore => (
-                      <article className="review-card-item" key={chore.id}>
-                        <div className="review-item-top">
-                          <span className="chore-emoji">{chore.icon}</span>
-                          <span className="pending-badge">● Needs review</span>
-                        </div>
-                        <h3>{chore.title}</h3>
-                        <p className="child-line"><span className="child-dot">{chore.child === 'Alex' ? '👦🏻' : '👧🏻'}</span> Submitted by {chore.child}</p>
-                        {chore.proof ? (
-                          <img className="proof-preview" src={chore.proof} alt={`Photo proof for ${chore.title}`} />
-                        ) : (
-                          <div className="proof-placeholder">
-                            <span>📸</span><strong>Photo proof needed</strong><small>Attach a demo photo to review this task.</small>
-                          </div>
-                        )}
-                        <div className="review-actions">
-                          <label className="upload-btn">
-                            📷 {chore.proof ? 'Change photo' : 'Add photo proof'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              ref={el => { fileRefs.current[chore.id] = el }}
-                              onChange={e => uploadProof(chore.id, e.target.files?.[0])}
-                              hidden
-                            />
-                          </label>
-                          <button className="approve-btn" onClick={() => approveChore(chore)}>✓ Approve</button>
-                          <button className="reject-btn" title="Return chore" onClick={() => rejectChore(chore.id)}>↺</button>
-                        </div>
-                        <div className="points-strip">⭐ {chore.points} points <span>≈ ₹{(chore.points * moneyPerPoint).toFixed(2)}</span></div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section className="section-block">
-                <div className="section-heading">
-                  <div><span className="section-kicker">READY WHEN THEY ARE</span><h2>Available chores <span className="heading-emoji">🌈</span></h2><p>Tasks waiting for your children to get started.</p></div>
-                  <button className="text-btn" onClick={() => setPage('Chores')}>Manage chores →</button>
-                </div>
-                <ChoreList chores={availableChores.slice(0, 4)} />
-              </section>
-            </>
-          )}
-
-          {page === 'Chores' && (
-            <section className="section-block">
-              <div className="section-heading">
-                <div><span className="section-kicker">YOUR FAMILY TASK BOARD</span><h2>All chores <span className="heading-emoji">🧩</span></h2><p>Manage every task from one place.</p></div>
-                <button className="primary-btn" onClick={() => setShowForm(true)}>＋ New chore</button>
-              </div>
-              <div className="filter-pills">
-                <span>{chores.length} total tasks</span><span>{availableChores.length} available</span><span>{pendingChores.length} pending</span><span>{approvedChores.length} approved</span>
-              </div>
-              <ChoreList chores={visibleChores} showStatus />
-            </section>
-          )}
-
-          {page === 'Rewards' && (
-            <section className="section-block">
-              <div className="section-heading">
-                <div><span className="section-kicker">EVERY EFFORT COUNTS</span><h2>Family reward ledger <span className="heading-emoji">💰</span></h2><p>Approved chores add points and estimated pocket money.</p></div>
-              </div>
-              <div className="ledger-banner"><span>🐷</span><div><small>COMBINED FAMILY REWARDS</small><h2>₹{earnedMoney.toFixed(2)}</h2><p>{totalPoints} approved points · ₹{moneyPerPoint.toFixed(2)} per point</p></div></div>
-              {approvedChores.length === 0 ? (
-                <div className="empty-state"><span>🎁</span><h3>Your reward journey starts here</h3><p>Approve a completed chore to see it in the reward ledger.</p></div>
-              ) : (
-                <div className="ledger-list">
-                  {approvedChores.map(chore => (
-                    <div className="ledger-row" key={chore.id}>
-                      <span className="chore-emoji">{chore.icon}</span>
-                      <div className="ledger-description"><strong>{chore.title}</strong><small>{chore.child} · Approved chore</small></div>
-                      <div className="ledger-amount"><strong>+{chore.points} pts</strong><small>₹{(chore.points * moneyPerPoint).toFixed(2)}</small></div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="demo-note">Pocket money is an estimate for family tracking. No real payment is processed.</p>
-            </section>
-          )}
-
-          <footer className="page-footer">Made with 💜 for happier families · <strong>CheckBounty</strong></footer>
-        </div>
-      </main>
-
-      {showForm && (
-        <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setShowForm(false) }}>
-          <form className="chore-form" onSubmit={addChore}>
-            <div className="modal-heading"><div><span className="section-kicker">MAKE IT A LITTLE ADVENTURE</span><h2>Create a chore ✨</h2><p>Give your little helper a task to tackle.</p></div><button type="button" className="close-btn" onClick={() => setShowForm(false)}>×</button></div>
-            <label>Chore name<input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Feed the pet" required maxLength={80} /></label>
-            <label>Assign to<select value={child} onChange={e => setChild(e.target.value)}><option>Alex</option><option>Emma</option></select></label>
-            <label>Reward points<input type="number" min="1" max="1000" value={points} onChange={e => setPoints(e.target.value)} required /></label>
-            <label>Pick an icon</label>
-            <div className="emoji-picker">{['⭐', '🧹', '🪴', '📚', '🛏️', '🍽️', '🐶', '🧺'].map(emoji => <button type="button" key={emoji} className={icon === emoji ? 'emoji-choice selected' : 'emoji-choice'} onClick={() => setIcon(emoji)}>{emoji}</button>)}</div>
-            <div className="reward-preview"><span>✨</span><div><strong>₹{(Math.max(0, Number(points) || 0) * moneyPerPoint).toFixed(2)} estimated value</strong><small>At ₹{moneyPerPoint.toFixed(2)} per point. You can adjust this rule in a future version.</small></div></div>
-            <div className="modal-actions"><button type="button" className="secondary-btn" onClick={() => setShowForm(false)}>Cancel</button><button className="primary-btn" type="submit">Create chore →</button></div>
-          </form>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ChoreList({ chores, showStatus = false }) {
-  if (chores.length === 0) {
-    return <div className="empty-state compact"><span>🌱</span><h3>No chores here yet</h3><p>Create a chore to get the family started.</p></div>
+        </main>
+      </div>
+    );
   }
 
   return (
-    <div className="chore-list">
-      {chores.map(chore => (
-        <article className="chore-row" key={chore.id}>
-          <span className="chore-emoji">{chore.icon}</span>
-          <div className="chore-description"><strong>{chore.title}</strong><small>Assigned to {chore.child}</small></div>
-          {showStatus && <span className={`status-pill ${chore.status === 'Approved' ? 'approved' : chore.status === 'Pending review' ? 'pending' : ''}`}>{chore.status}</span>}
-          <div className="chore-reward"><strong>⭐ {chore.points}</strong><small>points</small></div>
-        </article>
-      ))}
+    <div style={styles.page}>
+      <header style={styles.header}>
+        <div>
+          <h1 style={{ margin: 0 }}>CheckBounty</h1>
+          <p style={{ margin: "6px 0 0" }}>
+            {role} dashboard · Welcome, {userName}!
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={logout}
+          style={{ ...styles.secondaryButton, background: "white" }}
+        >
+          Log out
+        </button>
+      </header>
+
+      <main style={styles.main}>
+        {message && (
+          <div
+            role="status"
+            style={{
+              ...styles.card,
+              borderLeft: "5px solid #6c4de6",
+              padding: 14,
+            }}
+          >
+            {message}
+            <button
+              type="button"
+              onClick={() => setMessage("")}
+              style={{ ...styles.secondaryButton, marginLeft: 12 }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {role === "Parent" ? (
+          <>
+            <h2>Parent Dashboard</h2>
+            <p style={styles.muted}>
+              Manage chores and review your child's photo submissions.
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: 14,
+              }}
+            >
+              <div style={styles.card}>
+                <p style={styles.muted}>Pending submissions</p>
+                <h2>{pendingCount}</h2>
+              </div>
+
+              <div style={styles.card}>
+                <p style={styles.muted}>Approved chores</p>
+                <h2>{approvedCount}</h2>
+              </div>
+
+              <div style={styles.card}>
+                <p style={styles.muted}>Child's earned balance</p>
+                <h2>₹{points * moneyPerPoint}</h2>
+              </div>
+            </div>
+
+            <section style={styles.card}>
+              <h3>Add a new chore</h3>
+
+              <form onSubmit={addChore}>
+                <label>
+                  Chore name
+                  <input
+                    style={styles.input}
+                    value={newTitle}
+                    onChange={(event) => setNewTitle(event.target.value)}
+                    placeholder="e.g. Feed the pet"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Points (1 point = ₹1)
+                  <input
+                    style={styles.input}
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={newPoints}
+                    onChange={(event) => setNewPoints(event.target.value)}
+                    required
+                  />
+                </label>
+
+                <button type="submit" style={styles.button}>
+                  + Add Chore
+                </button>
+              </form>
+            </section>
+
+            <section>
+              <h3>Chore submissions</h3>
+
+              {chores.map((chore) => (
+                <article key={chore.id} style={styles.card}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: "0 0 8px" }}>{chore.title}</h3>
+                      <p style={styles.muted}>
+                        {chore.points} points · ₹{chore.points * moneyPerPoint}
+                      </p>
+                    </div>
+
+                    <strong>{chore.status}</strong>
+                  </div>
+
+                  {chore.photo && (
+                    <div style={{ margin: "14px 0" }}>
+                      <p style={styles.muted}>Submitted photo:</p>
+                      <img
+                        src={chore.photo}
+                        alt={`Photo submitted for ${chore.title}`}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          maxWidth: 320,
+                          maxHeight: 260,
+                          objectFit: "contain",
+                          borderRadius: 10,
+                          border: "1px solid #ddd",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {chore.status === "Pending Review" && (
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        onClick={() => reviewChore(chore.id, true)}
+                        style={{ ...styles.button, background: "#18864b" }}
+                      >
+                        Approve
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => reviewChore(chore.id, false)}
+                        style={{ ...styles.button, background: "#c53b50" }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </section>
+          </>
+        ) : (
+          <>
+            <h2>Child Dashboard</h2>
+            <p style={styles.muted}>
+              Complete your chores, upload photo proof, and earn rewards!
+            </p>
+
+            <section style={styles.card}>
+              <p style={styles.muted}>Your earned points</p>
+              <h2>{points} points</h2>
+              <p>
+                Reward balance: <strong>₹{points * moneyPerPoint}</strong>
+              </p>
+              <p style={styles.muted}>
+                Your parent must approve a submission before points are added.
+              </p>
+            </section>
+
+            <h3>Your chores</h3>
+
+            {chores.map((chore) => (
+              <article key={chore.id} style={styles.card}>
+                <h3 style={{ marginTop: 0 }}>{chore.title}</h3>
+                <p style={styles.muted}>
+                  Reward: {chore.points} points (₹{chore.points * moneyPerPoint})
+                </p>
+                <p>
+                  Status: <strong>{chore.status}</strong>
+                </p>
+
+                {chore.status === "Available" && (
+                  <label>
+                    Upload a photo showing your completed chore
+                    <input
+                      style={styles.input}
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) =>
+                        submitPhoto(chore.id, event.target.files?.[0])
+                      }
+                    />
+                  </label>
+                )}
+
+                {chore.status === "Rejected" && (
+                  <button
+                    type="button"
+                    style={styles.button}
+                    onClick={() => tryAgain(chore.id)}
+                  >
+                    Try Again
+                  </button>
+                )}
+
+                {chore.status === "Pending Review" && (
+                  <p style={styles.muted}>
+                    Photo submitted. Waiting for parent approval.
+                  </p>
+                )}
+
+                {chore.status === "Approved" && (
+                  <p style={{ color: "#18864b", fontWeight: "bold" }}>
+                    ✓ Approved! You earned {chore.points} points.
+                  </p>
+                )}
+              </article>
+            ))}
+
+            <section style={styles.card}>
+              <h3>Monthly earnings summary</h3>
+              <p>
+                Approved points: <strong>{points}</strong>
+              </p>
+              <p>
+                Potential reward amount:{" "}
+                <strong>₹{points * moneyPerPoint}</strong>
+              </p>
+              <p style={styles.muted}>
+                This is a demo balance, not a bank transfer or an actual payout.
+                Month-end payout scheduling will be added later.
+              </p>
+            </section>
+          </>
+        )}
+      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
